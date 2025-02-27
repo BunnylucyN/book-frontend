@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+
 const App = () => {
   const [books, setBooks] = useState([]);
   const [newBook, setNewBook] = useState({ title: '', author: '', image_url: ''});
   const [editBook, setEditBook] = useState(null);
-  const uri = 'https://scaling-parakeet-5gv9p6vpv6c4977-5001.app.github.dev/'
+  const uri = 'https://literate-yodel-q74x67x9j7jp39999-5001.app.github.dev/'
+
+  const username = 'admin'; // ใช้ชื่อผู้ใช้ที่คุณตั้งใน Backend
+  const password = 'password'; // ใช้รหัสผ่านที่คุณตั้งใน Backend
+  const encodedCredentials = btoa(`${username}:${password}`); 
+
   useEffect(() => {
     fetchBooks();
   }, []);
@@ -18,6 +24,7 @@ const App = () => {
       console.error('Error fetching books:', error);
     }
   };
+//keyworld routing
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -29,8 +36,17 @@ const App = () => {
   };
 
   const handleCreateBook = async () => {
+    if (!newBook.title || !newBook.author || !newBook.image_url) {
+      console.error('Please provide all required fields');
+      return;
+    }
+
     try {
-      const response = await axios.post(`${uri}/books`, newBook);
+      const response = await axios.post(`${uri}/books`, newBook,{
+        headers: {
+          'Authorization': `Basic ${encodedCredentials}` // ใส่ค่า Authorization Header
+        }
+      });
       setBooks([...books, response.data]);
       setNewBook({ title: '', author: '', image_url: '' }); // Clear the form
     } catch (error) {
@@ -43,22 +59,40 @@ const App = () => {
   };
 
   const handleUpdateBook = async () => {
+    if (!editBook.title || !editBook.author || !editBook.image_url) {
+      console.error('Please provide all required fields');
+      return;
+    }
+
     try {
-      const response = await axios.put(`${uri}/books/${editBook.id}`, editBook);
+      const response = await axios.put(`${uri}/books/${encodeURIComponent(editBook.title)}`, editBook,{
+        headers: {
+          'Authorization': `Basic ${encodedCredentials}` // ใส่ค่า Authorization Header
+        }
+      });
       const updatedBooks = books.map((book) =>
-        book.id === editBook.id ? response.data : book
+        book.title === editBook.title ? response.data : book
       );
       setBooks(updatedBooks);
-      setEditBook(null); // Clear edit mode
+      setEditBook({ title: '', author: '', image_url: '' }); // Clear edit form
     } catch (error) {
       console.error('Error updating book:', error);
     }
   };
 
-  const handleDeleteBook = async (bookId) => {
+  const handleDeleteBook = async (bookTitle) => {
+    if (!bookTitle) {
+      console.error('Book title is undefined');
+      return;
+    }
+  
     try {
-      await axios.delete(`${uri}/books/${bookId}`);
-      const filteredBooks = books.filter((book) => book.id !== bookId);
+      await axios.delete(`${uri}/books/${encodeURIComponent(bookTitle)}`,{
+        headers: {
+          'Authorization': `Basic ${encodedCredentials}` // ใส่ค่า Authorization Header
+        }
+      });
+      const filteredBooks = books.filter((book) => book.title !== bookTitle);
       setBooks(filteredBooks);
     } catch (error) {
       console.error('Error deleting book:', error);
@@ -80,10 +114,10 @@ const App = () => {
         </thead>
         <tbody>
           {books.map((book) => (
-            <tr key={book.id}>
-              <td>{book.id}</td>
+            <tr key={book.title}>
+              <td>{book.title}</td>
               <td>
-              {editBook && editBook.id === book.id ? (
+              {editBook && editBook.title === book.title ? (
                 <input
                   type="text"
                   name="image_url"
@@ -95,7 +129,7 @@ const App = () => {
                 )}
               </td>
               <td>
-                {editBook && editBook.id === book.id ? (
+                {editBook && editBook.title === book.title ? (
                   <input
                     type="text"
                     name="title"
@@ -107,7 +141,7 @@ const App = () => {
                 )}
               </td>
               <td>
-                {editBook && editBook.id === book.id ? (
+                {editBook && editBook.title === book.title ? (
                   <input
                     type="text"
                     name="author"
@@ -119,12 +153,12 @@ const App = () => {
                 )}
               </td>
               <td>
-                {editBook && editBook.id === book.id ? (
+                {editBook && editBook.title === book.title ? (
                   <button onClick={handleUpdateBook}>Update</button>
                 ) : (
                   <button onClick={() => handleEditBook(book)}>Edit</button>
                 )}
-                <button onClick={() => handleDeleteBook(book.id)}>Delete</button>
+                <button onClick={() => handleDeleteBook(book.title)}>Delete</button>
               </td>
             </tr>
           ))}
